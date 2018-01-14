@@ -1,0 +1,171 @@
+main:
+irmovq $0x1, %rdi   # dx:n arvo
+irmovq $0x1, %rsi   # dy:n arvo
+irmovq $0x0, %rbx   # y:n arvo
+
+irmovq $0x8, %rdx   # apuarvo pinossa liikkumiseen
+irmovq $0x1, %rcx   # apuarvo laskuihin
+
+rrmovq %r10, %r14   # kopio säteestä
+subq %rcx, %r14     # säde-1 = x
+
+subq %rdx, %rsp     # siirretään pino osoitinta
+
+rrmovq %rsi, %r11   # err arvo = dx - (säde << 1), sijoitetaan tässä dx
+addq %r10, %r10     # suoritetaan shiftaus (säde << 1)
+subq %r10, %r11     # lasketaan dx - (säde << 1)= err
+rrmovq %r11, %rax   # dx - (säde << 1) apuarvo laskuihin
+
+#piirtosilmukka (pyörii ,kun (x >= y))
+loop:
+    #koordinaatti 1 (x0 + x, y0 + y)
+    rrmovq %r8, %r12    # kopio koordinaatti x0:sta
+    rrmovq %r9, %r13    # kopio koordinaatti y0:sta
+    addq %r14, %r12     # x0 + x
+    call shiftaus       # r12 << 32
+    addq %rbx, %r13     # y0 + y
+    addq %r13, %r12     # viedään koordinaatit samaan rekisteriin
+    rmmovq %r12, (%rsp) # tallennetaan koordinaatti pinoon
+    subq %rdx, %rsp     # siirretään pino osoitinta
+    
+    #koordinaatti 2 (x0 + y, y0 + x)
+    rrmovq %r8, %r12    # kopio koordinaatti x0:sta
+    rrmovq %r9, %r13    # kopio koordinaatti y0:sta
+    addq %rbx, %r12     # x0 + y
+    call shiftaus       # r12 << 32
+    addq %r14, %r13     # y0 + x
+    addq %r13, %r12     # viedään koordinaatit samaan rekisteriin
+    rmmovq %r12, (%rsp) # tallennetaan koordinaatti pinoon
+    subq %rdx, %rsp     # siirretään pino osoitinta
+    
+    #koordinaatti 3 (x0 - y, y0 + x)
+    rrmovq %r8, %r12    # kopio koordinaatti x0:sta
+    rrmovq %r9, %r13    # kopio koordinaatti y0:sta
+    subq %rbx, %r12     # x0 - y
+    call shiftaus       # r12 << 32
+    addq %r14, %r13     # y0 + x
+    addq %r13, %r12     # viedään koordinaatit samaan rekisteriin
+    rmmovq %r12, (%rsp) # tallennetaan koordinaatti pinoon
+    subq %rdx, %rsp     # siirretään pino osoitinta
+    
+    #koordinaatti 4 (x0 - x, y0 + y)
+    rrmovq %r8, %r12    # kopio koordinaatti x0:sta
+    rrmovq %r9, %r13    # kopio koordinaatti y0:sta
+    subq %r14, %r12     # x0 - x
+    call shiftaus       # r12 << 32
+    addq %rbx, %r13     # y0 + y
+    addq %r13, %r12     # viedään koordinaatit samaan rekisteriin
+    rmmovq %r12, (%rsp) # tallennetaan koordinaatti pinoon
+    subq %rdx, %rsp     # siirretään pino osoitinta
+    
+    #koordinaatti 5 (x0 - x, y0 - y)
+    rrmovq %r8, %r12    # kopio koordinaatti x0:sta
+    rrmovq %r9, %r13    # kopio koordinaatti y0:sta
+    subq %r14, %r12     # x0 - x
+    call shiftaus       # r12 << 32
+    subq %rbx, %r13     # y0 - y
+    addq %r13, %r12     # viedään koordinaatit samaan rekisteriin
+    rmmovq %r12, (%rsp) # tallennetaan koordinaatti pinoon
+    subq %rdx, %rsp     # siirretään pino osoitinta
+    
+    #koordinaatti 6 (x0 - y, y0 - x)
+    rrmovq %r8, %r12    # kopio koordinaatti x0:sta
+    rrmovq %r9, %r13    # kopio koordinaatti y0:sta
+    subq %rbx, %r12     # x0 - y
+    call shiftaus       # r12 << 32
+    subq %r14, %r13     # y0 - x
+    addq %r13, %r12     # viedään koordinaatit samaan rekisteriin
+    rmmovq %r12, (%rsp) # tallennetaan koordinaatti pinoon
+    subq %rdx, %rsp     # siirretään pino osoitinta
+    
+    #koordinaatti 7 (x0 + y, y0 - x)
+    rrmovq %r8, %r12    # kopio koordinaatti x0:sta
+    rrmovq %r9, %r13    # kopio koordinaatti y0:sta
+    addq %rbx, %r12     # x0 + y
+    call shiftaus       # r12 << 32
+    subq %r14, %r13     # y0 - x
+    addq %r13, %r12     # viedään koordinaatit samaan rekisteriin
+    rmmovq %r12, (%rsp) # tallennetaan koordinaatti pinoon
+    subq %rdx, %rsp     # siirretään pino osoitinta
+    
+    #koordinaatti 8 (x0 + x, y0 - y)
+    rrmovq %r8, %r12    # kopio koordinaatti x0:sta
+    rrmovq %r9, %r13    # kopio koordinaatti y0:sta
+    addq %r14, %r12     # x0 + x
+    call shiftaus       # r12 << 32
+    subq %rbx, %r13     # y0 - y
+    addq %r13, %r12     # viedään koordinaatit samaan rekisteriin
+    rmmovq %r12, (%rsp) # tallennetaan koordinaatti pinoon
+    subq %rdx, %rsp     # siirretään pino osoitinta
+    
+    #tarkistetaan onko (x >= y)
+    rrmovq %r14, %r12    # kopio x:stä
+    rrmovq %rbx, %r13    # kopio y:stä
+    subq %r12, %r13      # y - x
+    jge end              #jos  y-x on suurempi kuin nolla hypätään kohtaan end missä suoritus loppuu
+   
+    #Uudet parametrit
+    rrmovq %r11, %r10   # kopio err:stä rekisteriin r10
+    subq %rcx, %r10     # err(kopio) - 1
+    jl parametritA      # jos edellinen lasku oli pienempi kuin 0
+    jge parametritB     # jos edellinen lasku oli suurempi tai yhtäkuin 0
+        #laskee uudet parametrit jos (err <= 0)
+        parametritA:
+        addq %rcx, %rbx # y++
+        addq %rsi, %r11 # err += dy
+        addq %rcx, %rsi
+        addq %rcx, %rsi # dy += 2(tämä ja ylempi rivi)
+
+        #laskee uudet parametrit jos (err > 0)
+        rrmovq %r11, %r10   # kopio err:stä rekisteriin r10
+        subq %rcx, %r10     # err(kopio) - 1
+        jge parametritB     # jos edellinen lasku oli suurempi tai yhtäkuin 0
+        jmp loop            # hyppää loopin alkuun jos ei mennä suorittamaan parametri b
+        
+        parametritB:
+        subq %rcx, %r14 # x--
+        addq %rcx, %rdi # 
+        addq %rcx, %rdi # dx += 2(tämä ja ylempi rivi)
+        addq %rax, %r11 # err += dx-(säde << 1)
+        jmp loop
+end:
+halt #lopettaa suorituksen
+
+
+
+#shiftaa bittejä 32:lla
+shiftaus:
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+addq %r12, %r12
+
+ret
